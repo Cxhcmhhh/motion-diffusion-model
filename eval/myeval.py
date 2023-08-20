@@ -153,7 +153,7 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
             print(f'Time: {datetime.now()}')
             print(f'Time: {datetime.now()}', file=f, flush=True)
             mat_score_dict, R_precision_dict, acti_dict = evaluate_matching_score(eval_wrapper, motion_loaders, f)
-'''
+            '''
             print(f'Time: {datetime.now()}')
             print(f'Time: {datetime.now()}', file=f, flush=True)
             fid_score_dict = evaluate_fid(eval_wrapper, gt_loader, acti_dict, f)
@@ -166,7 +166,7 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                 print(f'Time: {datetime.now()}')
                 print(f'Time: {datetime.now()}', file=f, flush=True)
                 mm_score_dict = evaluate_multimodality(eval_wrapper, mm_motion_loaders, f, mm_num_times)
-'''
+            '''
             print(f'!!! DONE !!!')
             print(f'!!! DONE !!!', file=f, flush=True)
 
@@ -181,7 +181,7 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                     all_metrics['R_precision'][key] = [item]
                 else:
                     all_metrics['R_precision'][key] += [item]
-'''
+            '''
             for key, item in fid_score_dict.items():
                 if key not in all_metrics['FID']:
                     all_metrics['FID'][key] = [item]
@@ -199,7 +199,7 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                         all_metrics['MultiModality'][key] = [item]
                     else:
                         all_metrics['MultiModality'][key] += [item]
-'''
+            '''
 
         # print(all_metrics['Diversity'])
         mean_dict = {}
