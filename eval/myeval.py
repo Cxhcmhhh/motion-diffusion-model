@@ -262,7 +262,8 @@ if __name__ == '__main__':
         mm_num_times = 0
         diversity_times = 300
         replication_times = 5  # about 15 Hrs
-
+    else:
+        raise ValueError()
     '''
      elif args.eval_mode == 'wo_mm':
         num_samples_limit = 1000
@@ -280,9 +281,9 @@ if __name__ == '__main__':
         mm_num_times = 10
         diversity_times = 300
         replication_times = 5  # about 15 Hrs
-    '''
     else:
         raise ValueError()
+    '''
 
 
     dist_util.setup_dist(args.device)
