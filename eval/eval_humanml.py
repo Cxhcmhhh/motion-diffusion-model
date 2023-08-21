@@ -256,6 +256,33 @@ if __name__ == '__main__':
         mm_num_repeats = 0
         mm_num_times = 0
         diversity_times = 300
+        replication_times = 5 # about 12 Hrs
+    elif args.eval_mode == 'mm_short':
+        num_samples_limit = 1000
+        run_mm = False
+        mm_num_samples = 0
+        mm_num_repeats = 0
+        mm_num_times = 0
+        diversity_times = 300
+        replication_times = 5  # about 15 Hrs
+    else:
+        raise ValueError()
+    '''
+    if args.eval_mode == 'debug':
+        num_samples_limit = 1000  # None means no limit (eval over all dataset)
+        run_mm = False
+        mm_num_samples = 0
+        mm_num_repeats = 0
+        mm_num_times = 0
+        diversity_times = 300
+        replication_times = 5  # about 3 Hrs
+    elif args.eval_mode == 'wo_mm':
+        num_samples_limit = 1000
+        run_mm = False
+        mm_num_samples = 0
+        mm_num_repeats = 0
+        mm_num_times = 0
+        diversity_times = 300
         replication_times = 20 # about 12 Hrs
     elif args.eval_mode == 'mm_short':
         num_samples_limit = 1000
@@ -267,6 +294,7 @@ if __name__ == '__main__':
         replication_times = 5  # about 15 Hrs
     else:
         raise ValueError()
+    '''
 
 
     dist_util.setup_dist(args.device)
