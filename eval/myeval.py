@@ -108,7 +108,7 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                     all_metrics['R_precision'][key] = [item]
                 else:
                     all_metrics['R_precision'][key] += [item]
-        continue()   
+            continue  
         # print(all_metrics['Diversity'])
         mean_dict = {}
         for metric_name, metric_dict in all_metrics.items():
