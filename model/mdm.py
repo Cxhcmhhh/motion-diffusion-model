@@ -5,7 +5,10 @@ import torch.nn.functional as F
 import clip
 from model.rotation2xyz import Rotation2xyz
 
-
+def add_gaussian_noise(tensor, mean=0, std=0.5):
+    noise = torch.randn(tensor.size()) * std + mean
+    noisy_tensor = tensor + noise
+    return noisy_tensor
 
 class MDM(nn.Module):
     def __init__(self, modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
@@ -149,7 +152,9 @@ class MDM(nn.Module):
         force_mask = y.get('uncond', False)
         if 'text' in self.cond_mode:
             enc_text = self.encode_text(y['text'])
+            #enc_text = add_gaussian_noise(enc_text)
             emb += self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
+            #emb += add_gaussian_noise(self.embed_text(self.mask_cond(enc_text, force_mask=force_mask)))
         if 'action' in self.cond_mode:
             action_emb = self.embed_action(y['action'])
             emb += self.mask_cond(action_emb, force_mask=force_mask)
