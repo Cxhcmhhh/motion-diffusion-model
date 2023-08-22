@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import clip
 from model.rotation2xyz import Rotation2xyz
 
-def add_gaussian_noise(tensor, mean=0, std=0.5):
+def add_gaussian_noise(tensor, mean=0, std=0.1):
     noise = torch.randn(tensor.size()) * std + mean
     noisy_tensor = tensor + noise
     return noisy_tensor
