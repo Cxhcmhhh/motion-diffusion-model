@@ -69,65 +69,6 @@ def evaluate_matching_score(eval_wrapper, motion_loaders, file):
     return match_score_dict, R_precision_dict, activation_dict
 
 
-def evaluate_fid(eval_wrapper, groundtruth_loader, activation_dict, file):
-    eval_dict = OrderedDict({})
-    gt_motion_embeddings = []
-    print('========== Evaluating FID ==========')
-    with torch.no_grad():
-        for idx, batch in enumerate(groundtruth_loader):
-            _, _, _, sent_lens, motions, m_lens, _ = batch
-            motion_embeddings = eval_wrapper.get_motion_embeddings(
-                motions=motions,
-                m_lens=m_lens
-            )
-            gt_motion_embeddings.append(motion_embeddings.cpu().numpy())
-    gt_motion_embeddings = np.concatenate(gt_motion_embeddings, axis=0)
-    gt_mu, gt_cov = calculate_activation_statistics(gt_motion_embeddings)
-
-    # print(gt_mu)
-    for model_name, motion_embeddings in activation_dict.items():
-        mu, cov = calculate_activation_statistics(motion_embeddings)
-        # print(mu)
-        fid = calculate_frechet_distance(gt_mu, gt_cov, mu, cov)
-        print(f'---> [{model_name}] FID: {fid:.4f}')
-        print(f'---> [{model_name}] FID: {fid:.4f}', file=file, flush=True)
-        eval_dict[model_name] = fid
-    return eval_dict
-
-
-def evaluate_diversity(activation_dict, file, diversity_times):
-    eval_dict = OrderedDict({})
-    print('========== Evaluating Diversity ==========')
-    for model_name, motion_embeddings in activation_dict.items():
-        diversity = calculate_diversity(motion_embeddings, diversity_times)
-        eval_dict[model_name] = diversity
-        print(f'---> [{model_name}] Diversity: {diversity:.4f}')
-        print(f'---> [{model_name}] Diversity: {diversity:.4f}', file=file, flush=True)
-    return eval_dict
-
-
-def evaluate_multimodality(eval_wrapper, mm_motion_loaders, file, mm_num_times):
-    eval_dict = OrderedDict({})
-    print('========== Evaluating MultiModality ==========')
-    for model_name, mm_motion_loader in mm_motion_loaders.items():
-        mm_motion_embeddings = []
-        with torch.no_grad():
-            for idx, batch in enumerate(mm_motion_loader):
-                # (1, mm_replications, dim_pos)
-                motions, m_lens = batch
-                motion_embedings = eval_wrapper.get_motion_embeddings(motions[0], m_lens[0])
-                mm_motion_embeddings.append(motion_embedings.unsqueeze(0))
-        if len(mm_motion_embeddings) == 0:
-            multimodality = 0
-        else:
-            mm_motion_embeddings = torch.cat(mm_motion_embeddings, dim=0).cpu().numpy()
-            multimodality = calculate_multimodality(mm_motion_embeddings, mm_num_times)
-        print(f'---> [{model_name}] Multimodality: {multimodality:.4f}')
-        print(f'---> [{model_name}] Multimodality: {multimodality:.4f}', file=file, flush=True)
-        eval_dict[model_name] = multimodality
-    return eval_dict
-
-
 def get_metric_statistics(values, replication_times):
     mean = np.mean(values, axis=0)
     std = np.std(values, axis=0)
@@ -153,20 +94,6 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
             print(f'Time: {datetime.now()}')
             print(f'Time: {datetime.now()}', file=f, flush=True)
             mat_score_dict, R_precision_dict, acti_dict = evaluate_matching_score(eval_wrapper, motion_loaders, f)
-            '''
-            print(f'Time: {datetime.now()}')
-            print(f'Time: {datetime.now()}', file=f, flush=True)
-            fid_score_dict = evaluate_fid(eval_wrapper, gt_loader, acti_dict, f)
-
-            print(f'Time: {datetime.now()}')
-            print(f'Time: {datetime.now()}', file=f, flush=True)
-            div_score_dict = evaluate_diversity(acti_dict, f, diversity_times)
-
-            if run_mm:
-                print(f'Time: {datetime.now()}')
-                print(f'Time: {datetime.now()}', file=f, flush=True)
-                mm_score_dict = evaluate_multimodality(eval_wrapper, mm_motion_loaders, f, mm_num_times)
-            '''
             print(f'!!! DONE !!!')
             print(f'!!! DONE !!!', file=f, flush=True)
 
@@ -181,26 +108,7 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                     all_metrics['R_precision'][key] = [item]
                 else:
                     all_metrics['R_precision'][key] += [item]
-            '''
-            for key, item in fid_score_dict.items():
-                if key not in all_metrics['FID']:
-                    all_metrics['FID'][key] = [item]
-                else:
-                    all_metrics['FID'][key] += [item]
-
-            for key, item in div_score_dict.items():
-                if key not in all_metrics['Diversity']:
-                    all_metrics['Diversity'][key] = [item]
-                else:
-                    all_metrics['Diversity'][key] += [item]
-            if run_mm:
-                for key, item in mm_score_dict.items():
-                    if key not in all_metrics['MultiModality']:
-                        all_metrics['MultiModality'][key] = [item]
-                    else:
-                        all_metrics['MultiModality'][key] += [item]
-            '''
-
+        continue()   
         # print(all_metrics['Diversity'])
         mean_dict = {}
         for metric_name, metric_dict in all_metrics.items():
