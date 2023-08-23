@@ -190,7 +190,7 @@ class MDM(nn.Module):
             xseq = x
             xseq = self.sequence_pos_encoder(xseq)  # [seqlen, bs, d]
             output, _ = self.gru(xseq)
-
+        #output = add_gaussian_noise(output)
         output = self.output_process(output)  # [bs, njoints, nfeats, nframes]
         return output
 
