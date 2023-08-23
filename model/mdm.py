@@ -5,9 +5,11 @@ import torch.nn.functional as F
 import clip
 from model.rotation2xyz import Rotation2xyz
 
-def add_gaussian_noise(tensor, mean=0, std=0.1):
-    noise = torch.randn(tensor.size()) * std + mean
-    noisy_tensor = tensor + noise
+def add_gaussian_noise(tensor0, mean=0, std=0.1):
+    shape = tensor0.size()
+    noise = torch.cuda.FloatTensor(shape) if torch.cuda.is_available() else torch.FloatTensor(shape)
+    torch.randn(shape, out=noise)
+    noisy_tensor = tensor0 + (noise * std + mean)
     return noisy_tensor
 
 class MDM(nn.Module):
