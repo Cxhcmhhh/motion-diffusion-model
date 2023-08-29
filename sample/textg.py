@@ -82,6 +82,8 @@ def main():
     model.to(dist_util.dev())
     model.eval()  # disable random masking
 
+    print(model.named_modules())
+    
     if is_using_data:
         iterator = iter(data)
         _, model_kwargs = next(iterator)
