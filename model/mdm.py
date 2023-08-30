@@ -156,8 +156,9 @@ class MDM(nn.Module):
             enc_text = self.encode_text(y['text'])
             torch.save(enc_text, './before.pth')
             #enc_text = add_gaussian_noise(enc_text)
-            emb += self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
-            torch.save(emb, './after.pth')
+            myemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
+            emb += myemb
+            torch.save(myemb, './after.pth')
             #emb += add_gaussian_noise(self.embed_text(self.mask_cond(enc_text, force_mask=force_mask)))
         if 'action' in self.cond_mode:
             action_emb = self.embed_action(y['action'])
