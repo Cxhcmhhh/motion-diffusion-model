@@ -125,7 +125,7 @@ class TrainLoop:
             self.opt.load_state_dict(state_dict)
 
     def run_loop(self):
-        with open('./logfile', 'w') as f:
+        with open('./logfile.txt', 'w') as f:
             for epoch in range(self.num_epochs):
                 print(f'Starting epoch {epoch}')
                 print(f'Starting epoch {epoch}', file=f, flush=True)
