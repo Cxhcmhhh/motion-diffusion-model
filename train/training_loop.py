@@ -141,7 +141,7 @@ class TrainLoop:
                         for k,v in logger.get_current().name2val.items():
                             if k == 'loss':
                                 print('step[{}]: loss[{:0.5f}]'.format(self.step+self.resume_step, v))
-                                print('step[{}]: loss[{:0.5f}]', file=f, flush=True)
+                                print('step[{}]: loss[{:0.5f}]'.format(self.step+self.resume_step, v), file=f, flush=True)
                             if k in ['step', 'samples'] or '_q' in k:
                                 continue
                             else:
