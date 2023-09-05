@@ -1,0 +1,3 @@
+[submodule "TextAttack/TextAttack"]
+	path = TextAttack/TextAttack
+	url = https://github.com/Cxhcmhhh/TextAttack.git
