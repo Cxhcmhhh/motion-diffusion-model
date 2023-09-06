@@ -4,12 +4,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import clip
 from model.rotation2xyz import Rotation2xyz
-from TextAttack.TextAttack.textattack.augmentation import CLAREAugmenter
+from textattack.augmentation import CLAREAugmenter
 
-def textAug(s):
+def textAug(ss):
     augmenter = CLAREAugmenter()
-    news = augmenter.augment(s)
-    return news[0]
+    news = []
+    for s in ss:
+      new = augmenter.augment(s)
+      news.append(new[0])
+    return news
 
 def add_gaussian_noise(tensor0, mean=0, std=0.1):
     shape = tensor0.size()
