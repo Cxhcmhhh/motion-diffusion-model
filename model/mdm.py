@@ -4,6 +4,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import clip
 from model.rotation2xyz import Rotation2xyz
+from TextAttack.TextAttack.textattack.augmentation import CLAREAugmenter
+
+def textAug(s):
+    augmenter = CLAREAugmenter()
+    news = augmenter.augment(s)
+    return news[0]
 
 def add_gaussian_noise(tensor0, mean=0, std=0.1):
     shape = tensor0.size()
@@ -153,7 +159,8 @@ class MDM(nn.Module):
 
         force_mask = y.get('uncond', False)
         if 'text' in self.cond_mode:
-            enc_text = self.encode_text(y['text'])
+            #enc_text = self.encode_text(y['text'])
+            enc_text = self.encode_text(textAug(y['text']))
             #torch.save(enc_text, './before.pth')
             #enc_text = add_gaussian_noise(enc_text)
             myemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
