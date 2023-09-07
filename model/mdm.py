@@ -5,15 +5,15 @@ import torch.nn.functional as F
 import clip
 import random
 from model.rotation2xyz import Rotation2xyz
-from textattack.augmentation import CLAREAugmenter
+#from textattack.augmentation import CLAREAugmenter
 
-def textAug(ss):
-    augmenter = CLAREAugmenter()
-    news = []
-    for s in ss:
-      new = augmenter.augment(s)
-      news.append(new[0])
-    return news
+#def textAug(ss):
+#    augmenter = CLAREAugmenter()
+#    news = []
+#    for s in ss:
+#      new = augmenter.augment(s)
+#      news.append(new[0])
+#    return news
 
 def textRep(ss):
     newss = []
