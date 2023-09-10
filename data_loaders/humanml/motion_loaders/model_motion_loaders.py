@@ -103,4 +103,4 @@ def my_loader(model, diffusion, batch_size, ground_truth_loader, mm_num_samples,
 
     print('Generated Dataset Loading Completed!!!')
 
-    return motion_loader, mm_motion_loader
+    return motion_loader
