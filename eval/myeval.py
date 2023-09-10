@@ -1,7 +1,7 @@
 from utils.parser_util import evaluation_parser
 from utils.fixseed import fixseed
 from datetime import datetime
-from data_loaders.humanml.motion_loaders.model_motion_loaders import get_mdm_loader  # get_motion_loader
+from data_loaders.humanml.motion_loaders.model_motion_loaders import get_mdm_loader, my_loader  # get_motion_loader
 from data_loaders.humanml.utils.metrics import *
 from data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
 from collections import OrderedDict
@@ -82,12 +82,9 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                                    'R_precision': OrderedDict({})})
         for replication in range(replication_times):
             motion_loaders = {}
-            mm_motion_loaders = {}
-            motion_loaders['ground truth'] = gt_loader
             for motion_loader_name, motion_loader_getter in eval_motion_loaders.items():
-                motion_loader, mm_motion_loader = motion_loader_getter()
+                motion_loader = motion_loader_getter()
                 motion_loaders[motion_loader_name] = motion_loader
-                mm_motion_loaders[motion_loader_name] = mm_motion_loader
 
             print(f'==================== Replication {replication} ====================')
             print(f'==================== Replication {replication} ====================', file=f, flush=True)
@@ -219,7 +216,7 @@ if __name__ == '__main__':
         ################
         ## HumanML3D Dataset##
         ################
-        'vald': lambda: get_mdm_loader(
+        'vald': lambda: my_loader(
             model, diffusion, args.batch_size,
             gen_loader, mm_num_samples, mm_num_repeats, gt_loader.dataset.opt.max_motion_length, num_samples_limit, args.guidance_param
         )
