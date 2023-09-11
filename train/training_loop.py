@@ -208,7 +208,7 @@ class TrainLoop:
 
 
     def run_step(self, batch, cond):
-        self.forward_backward(batch, cond, AttackFlag = AttackFlag, Augmenter = Augmenter)
+        self.forward_backward(batch, cond, AttackFlag = self.AttackFlag, Augmenter = self.Augmenter)
         self.mp_trainer.optimize(self.opt)
         self._anneal_lr()
         self.log_step()
