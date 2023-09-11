@@ -55,7 +55,7 @@ def main():
     if (True):
         transformation = CompositeTransformation([WordSwapEmbedding(), WordSwapWordNet(), WordSwapMaskedLM()])
         constraints = [RepeatModification(), StopwordModification()]
-        augmenter = Augmenter(transformation=transformation, constraints=constraints, pct_words_to_swap=0.5, transformations_per_example=1)
+        augmenter = Augmenter(transformation=transformation, constraints=constraints, pct_words_to_swap=0.3, transformations_per_example=1)
     TrainLoop(args, train_platform, model, diffusion, data, AttackFlag = True, Augmenter = augmenter).run_loop()
     train_platform.close()
 
