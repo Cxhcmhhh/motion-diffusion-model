@@ -30,7 +30,7 @@ def textAtk(ss, Augmenter):
     accuracy = 0.0
     for s in ss:
         s = Augmenter.augment(s)
-        newss.append(s)
+        newss.append(s[0])
     return newss
     
 def add_gaussian_noise(tensor0, mean=0, std=0.1):
