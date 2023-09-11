@@ -25,6 +25,14 @@ def textRep(ss):
         newss.append(s)
     return newss
     
+def textAtk(ss, Augmenter):
+    newss = []
+    accuracy = 0.0
+    for s in ss:
+        s = Augmenter.augment(s)
+        newss.append(s)
+    return newss
+    
 def add_gaussian_noise(tensor0, mean=0, std=0.1):
     shape = tensor0.size()
     noise = torch.cuda.FloatTensor(shape) if torch.cuda.is_available() else torch.FloatTensor(shape)
@@ -163,7 +171,7 @@ class MDM(nn.Module):
             texts = clip.tokenize(raw_text, truncate=True).to(device) # [bs, context_length] # if n_tokens > 77 -> will truncate
         return self.clip_model.encode_text(texts).float()
 
-    def forward(self, x, timesteps, y=None):
+    def forward(self, x, timesteps, y=None, AttackFlag=False, Augmenter=None):
         """
         x: [batch_size, njoints, nfeats, max_frames], denoted x_t in the paper
         timesteps: [batch_size] (int)
@@ -173,7 +181,11 @@ class MDM(nn.Module):
 
         force_mask = y.get('uncond', False)
         if 'text' in self.cond_mode:
-            enc_text = self.encode_text(y['text'])
+            if (AttackFlag):
+                newtext = textAtk(y['text'], Augmenter)
+                enc_text = self.encode_text(newtext)
+            else:
+                enc_text = self.encode_text(y['text'])
             #enc_text = self.encode_text(textRep(y['text']))
             #enc_text = self.encode_text(textAug(y['text']))
             #torch.save(enc_text, './before.pth')
@@ -217,7 +229,10 @@ class MDM(nn.Module):
             output, _ = self.gru(xseq)
         #output = add_gaussian_noise(output)
         output = self.output_process(output)  # [bs, njoints, nfeats, nframes]
-        return output
+        if (AttackFlag):
+            return output, newtext
+        else:
+            return output
 
 
     def _apply(self, fn):
