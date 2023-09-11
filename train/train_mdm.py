@@ -13,6 +13,16 @@ from data_loaders.get_data import get_dataset_loader
 from utils.model_util import create_model_and_diffusion
 from train.train_platforms import ClearmlPlatform, TensorboardPlatform, NoPlatform  # required for the eval operation
 
+from textattack.transformations import WordSwapEmbedding
+from textattack.transformations import WordSwapWordNet
+from textattack.transformations import WordSwapMaskedLM
+from textattack.transformations import CompositeTransformation
+
+from textattack.constraints.pre_transformation import RepeatModification
+from textattack.constraints.pre_transformation import StopwordModification
+
+from textattack.augmentation import Augmenter
+
 def main():
     args = train_args()
     fixseed(args.seed)
@@ -42,7 +52,11 @@ def main():
 
     print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters_wo_clip()) / 1000000.0))
     print("Training...")
-    TrainLoop(args, train_platform, model, diffusion, data).run_loop()
+    if (True):
+        transformation = CompositeTransformation([WordSwapEmbedding(), WordSwapWordNet(), WordSwapMaskedLM()])
+        constraints = [RepeatModification(), StopwordModification()]
+        augmenter = Augmenter(transformation=transformation, constraints=constraints, pct_words_to_swap=0.5, transformations_per_example=1)
+    TrainLoop(args, train_platform, model, diffusion, data, AttackFlag = True, Augmenter = augmenter).run_loop()
     train_platform.close()
 
 if __name__ == "__main__":
