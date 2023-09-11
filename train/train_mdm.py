@@ -13,13 +13,8 @@ from data_loaders.get_data import get_dataset_loader
 from utils.model_util import create_model_and_diffusion
 from train.train_platforms import ClearmlPlatform, TensorboardPlatform, NoPlatform  # required for the eval operation
 
-from textattack.transformations import WordSwapEmbedding
 from textattack.transformations import WordSwapWordNet
-from textattack.transformations import WordSwapMaskedLM
 from textattack.transformations import CompositeTransformation
-
-from textattack.constraints.pre_transformation import RepeatModification
-from textattack.constraints.pre_transformation import StopwordModification
 
 from textattack.augmentation import Augmenter
 
