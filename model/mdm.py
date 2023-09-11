@@ -181,17 +181,19 @@ class MDM(nn.Module):
 
         force_mask = y.get('uncond', False)
         if 'text' in self.cond_mode:
+            enc_text = self.encode_text(y['text'])
+            oldemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
             if (AttackFlag):
                 newtext = textAtk(y['text'], Augmenter)
                 enc_text = self.encode_text(newtext)
+                newemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
+                emb += newemb
             else:
-                enc_text = self.encode_text(y['text'])
+                emb += oldemb
             #enc_text = self.encode_text(textRep(y['text']))
             #enc_text = self.encode_text(textAug(y['text']))
             #torch.save(enc_text, './before.pth')
             #enc_text = add_gaussian_noise(enc_text)
-            myemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
-            emb += myemb
             #torch.save(myemb, './after.pth')
             #emb += add_gaussian_noise(self.embed_text(self.mask_cond(enc_text, force_mask=force_mask)))
         if 'action' in self.cond_mode:
@@ -230,7 +232,7 @@ class MDM(nn.Module):
         #output = add_gaussian_noise(output)
         output = self.output_process(output)  # [bs, njoints, nfeats, nframes]
         if (AttackFlag):
-            return output, newtext
+            return output, newemb, oldemb
         else:
             return output
 
