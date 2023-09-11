@@ -27,7 +27,7 @@ INITIAL_LOG_LOSS_SCALE = 20.0
 
 
 class TrainLoop:
-    def __init__(self, args, train_platform, model, diffusion, data):
+    def __init__(self, args, train_platform, model, diffusion, data, AttackFlag = False, Augmenter = None):
         self.args = args
         self.dataset = args.dataset
         self.train_platform = train_platform
@@ -99,6 +99,9 @@ class TrainLoop:
             }
         self.use_ddp = False
         self.ddp_model = self.model
+
+        self.AttackFlag = AttackFlag
+        self.Augmenter = Augmenter
 
     def _load_and_sync_parameters(self):
         resume_checkpoint = find_resume_checkpoint() or self.resume_checkpoint
@@ -205,7 +208,7 @@ class TrainLoop:
 
 
     def run_step(self, batch, cond):
-        self.forward_backward(batch, cond)
+        self.forward_backward(batch, cond, AttackFlag = AttackFlag, Augmenter = Augmenter)
         self.mp_trainer.optimize(self.opt)
         self._anneal_lr()
         self.log_step()
@@ -227,7 +230,9 @@ class TrainLoop:
                 micro,  # [bs, ch, image_size, image_size]
                 t,  # [bs](int) sampled timesteps
                 model_kwargs=micro_cond,
-                dataset=self.data.dataset
+                dataset=self.data.dataset,
+                AttackFlag = self.AttackFlag,
+                Augmenter = self.Augmenter
             )
 
             if last_batch or not self.use_ddp:
