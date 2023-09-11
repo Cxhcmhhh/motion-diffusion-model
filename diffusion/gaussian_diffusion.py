@@ -1224,7 +1224,7 @@ class GaussianDiffusion:
         output = th.where((t == 0), decoder_nll, kl)
         return {"output": output, "pred_xstart": out["pred_xstart"]}
 
-    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None, dataset=None):
+    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None, dataset=None, AttackFlag=False, Augmenter=None):
         """
         Compute training losses for a single timestep.
 
@@ -1267,7 +1267,11 @@ class GaussianDiffusion:
             if self.loss_type == LossType.RESCALED_KL:
                 terms["loss"] *= self.num_timesteps
         elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
-            model_output = model(x_t, self._scale_timesteps(t), **model_kwargs)
+            if (AttackFlag):
+                model_output, accuracy = model(x_t, self._scale_timesteps(t), **model_kwargs, True, Augmenter=Augmenter)
+            else:
+                model_output = model(x_t, self._scale_timesteps(t), **model_kwargs)
+                accuracy = 1.0
 
             if self.model_var_type in [
                 ModelVarType.LEARNED,
@@ -1341,10 +1345,10 @@ class GaussianDiffusion:
                                                   model_output_vel[:, :-1, :, :],
                                                   mask[:, :, :, 1:])  # mean_flat((target_vel - model_output_vel) ** 2)
 
-            terms["loss"] = terms["rot_mse"] + terms.get('vb', 0.) +\
+            terms["loss"] = (terms["rot_mse"] + terms.get('vb', 0.) +\
                             (self.lambda_vel * terms.get('vel_mse', 0.)) +\
                             (self.lambda_rcxyz * terms.get('rcxyz_mse', 0.)) + \
-                            (self.lambda_fc * terms.get('fc', 0.))
+                            (self.lambda_fc * terms.get('fc', 0.))) * accuracy
 
         else:
             raise NotImplementedError(self.loss_type)
