@@ -47,10 +47,11 @@ def main():
 
     print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters_wo_clip()) / 1000000.0))
     print("Training...")
-    if (True):
+    augmenter = None
+    if (False):
         transformation = CompositeTransformation([WordSwapWordNet()])
         augmenter = Augmenter(transformation=transformation, pct_words_to_swap=0.2, transformations_per_example=1)
-    TrainLoop(args, train_platform, model, diffusion, data, AttackFlag = True, Augmenter = augmenter).run_loop()
+    TrainLoop(args, train_platform, model, diffusion, data, AttackFlag = False, Augmenter = augmenter).run_loop()
     train_platform.close()
 
 if __name__ == "__main__":
