@@ -13,10 +13,12 @@ from data_loaders.get_data import get_dataset_loader
 from utils.model_util import create_model_and_diffusion
 from train.train_platforms import ClearmlPlatform, TensorboardPlatform, NoPlatform  # required for the eval operation
 
+'''
 from textattack.transformations import WordSwapWordNet
 from textattack.transformations import CompositeTransformation
 
 from textattack.augmentation import Augmenter
+'''
 
 def main():
     args = train_args()
@@ -48,9 +50,11 @@ def main():
     print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters_wo_clip()) / 1000000.0))
     print("Training...")
     augmenter = None
+    '''
     if (False):
         transformation = CompositeTransformation([WordSwapWordNet()])
         augmenter = Augmenter(transformation=transformation, pct_words_to_swap=0.2, transformations_per_example=1)
+    '''
     TrainLoop(args, train_platform, model, diffusion, data, AttackFlag = False, Augmenter = augmenter).run_loop()
     train_platform.close()
 
