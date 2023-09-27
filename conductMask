@@ -1,0 +1,49 @@
+path = "./texts"
+files = os.listdir(path)
+for file in files:
+    if '.txt' in file:
+      print(file)
+      position = path + '/' + file
+      fr = open(position, "rb")
+      lineList = fr.readlines()
+      num = 0
+      for line in lineList:
+        mystr = line.decode("UTF-8")
+        x = mystr.split("#", 1)
+        if(x[0][-1] != '.'):
+          x[0] += '.'
+        pattern = '/NOUN'
+
+        cnt = 0
+        dic = {}
+        for m in re.finditer(pattern, x[1]):
+            indb = x[1].rfind(' ', 0, m.start()) + 1
+            inde = m.start()
+            subroot = x[1][indb:inde]
+            if (subroot == 'man' or subroot == 'person'):
+              continue
+            tmp = x[0].replace(subroot, '<mask>', 1)
+            tmp = tmp.replace('>s', '>')
+            tmp = tmp.replace('>ing', '>')
+            tmp = tmp.replace('>ed', '>')
+            if ('<mask>' in tmp):
+              thislist = nlp(tmp)
+              yes = thislist[1]['token_str']
+              subdic = {}
+              for i in range(0, 5):
+                tmp = thislist[i]['sequence']
+
+                embedding_1= model.encode(x[0], convert_to_tensor=True)
+                embedding_2 = model.encode(tmp, convert_to_tensor=True)
+
+                score = float(util.pytorch_cos_sim(embedding_1, embedding_2))
+
+                kv = {thislist[i]['token_str']: score}
+                subdic.update(kv)
+              kv = {subroot: subdic}
+              dic.update(kv)
+        stringdict = json.dumps(dic)
+        dicname = file.split(".", 1)
+        with open(r'./drive/MyDrive/Ndicts/'+dicname[0]+str(num)+'.json','w')as f:
+            f.write(stringdict)
+        num += 1
