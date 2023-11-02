@@ -14,7 +14,7 @@ from model.rotation2xyz import Rotation2xyz
 #      new = augmenter.augment(s)
 #      news.append(new[0])
 #    return news
-
+'''
 def textRep(ss):
     newss = []
     for s in ss:
@@ -32,7 +32,7 @@ def textAtk(ss, Augmenter):
         s = Augmenter.augment(s)
         newss.append(s[0])
     return newss
-    
+'''  
 def add_gaussian_noise(tensor0, mean=0, std=0.1):
     shape = tensor0.size()
     noise = torch.cuda.FloatTensor(shape) if torch.cuda.is_available() else torch.FloatTensor(shape)
