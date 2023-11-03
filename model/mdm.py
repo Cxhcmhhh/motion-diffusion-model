@@ -83,6 +83,7 @@ class MDM(nn.Module):
         self.input_process = InputProcess(self.data_rep, self.input_feats+self.gru_emb_dim, self.latent_dim)
 
         self.sequence_pos_encoder = PositionalEncoding(self.latent_dim, self.dropout)
+        self.pose_encoder = PositionalEncoding(self.clip_dim, self.dropout)
         self.emb_trans_dec = emb_trans_dec
 
         if self.arch == 'trans_enc':
@@ -115,6 +116,17 @@ class MDM(nn.Module):
         if self.cond_mode != 'no_cond':
             if 'text' in self.cond_mode:
                 self.embed_text = nn.Linear(self.clip_dim, self.latent_dim)
+                self.pose_dim = 288
+                print('POSE TRANS')
+                self.fc = nn.Linear(self.pose_dim, self.clip_dim)
+                poseTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.clip_dim,
+                                                              nhead=self.num_heads,
+                                                              dim_feedforward=self.ff_size,
+                                                              dropout=self.dropout,
+                                                              activation=self.activation)
+
+                self.poseTransEncoder = nn.TransformerEncoder(seqTransEncoderLayer,
+                                                         num_layers=self.num_layers)
                 print('EMBED TEXT')
                 print('Loading CLIP...')
                 self.clip_version = clip_version
