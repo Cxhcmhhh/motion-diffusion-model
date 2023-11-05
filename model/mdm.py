@@ -5,15 +5,7 @@ import torch.nn.functional as F
 import clip
 import random
 from model.rotation2xyz import Rotation2xyz
-
-
-
-def add_gaussian_noise(tensor0, mean=0, std=0.1):
-    shape = tensor0.size()
-    noise = torch.cuda.FloatTensor(shape) if torch.cuda.is_available() else torch.FloatTensor(shape)
-    torch.randn(shape, out=noise)
-    noisy_tensor = tensor0 + (noise * std + mean)
-    return noisy_tensor
+from allennlp_models import pretrained as allenPre
 
 class MDM(nn.Module):
     def __init__(self, modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
@@ -112,6 +104,9 @@ class MDM(nn.Module):
                 print('Loading CLIP...')
                 self.clip_version = clip_version
                 self.clip_model = self.load_and_freeze_clip(clip_version)
+
+                print('Loading SRL-BERT')
+                self.SRL_model = allenPre.load_predictor('structured-prediction-srl-bert')
             if 'action' in self.cond_mode:
                 self.embed_action = EmbedAction(self.num_actions, self.latent_dim)
                 print('EMBED ACTION')
@@ -164,6 +159,47 @@ class MDM(nn.Module):
             texts = clip.tokenize(raw_text, truncate=True).to(device) # [bs, context_length] # if n_tokens > 77 -> will truncate
         return self.clip_model.encode_text(texts).float()
 
+    def subPoseRetrieval(SRLpre, Txt):
+        subDict = SRLpre.predict(Txt)
+        index = [0, 0, 0, 0]
+        num = 0
+        for v in subDict['verbs']:
+            if num == 4:
+                break
+            sen = ""
+            if (v['tags'][0] == '0'):
+                continue
+            for i in range(len(v['tags'])):
+                if(v['tags'][i] != 'O'):
+                    sen += subDict['words'][i] + ' '
+            sen = sen[:-1]+'.'
+            if ' ' in sen:
+                enc_text = self.encode_text(sen)
+                min = 999999
+                pdist = nn.PairwiseDistance(p=2)
+                for i in range(len(self.codebook)):
+                    dis = pdist(codebook[i][0], enc_text)
+                    if (dis < min):
+                        min = dis
+                        index[num] = i
+                num += 1
+        if num == 1:
+            vec0 = torch.cat((codebook[index[0]][1], codebook[index[0]][1]), 1)
+            vec = torch.cat((vec0, vec0),1)
+        if num == 2:
+            vec0 = torch.cat((codebook[index[0]][1], codebook[index[0]][1]), 1)
+            vec1 = torch.cat((codebook[index[1]][1], codebook[index[1]][1]), 1)
+            vec = torch.cat((vec0, vec1),1)  
+        if num == 3:
+            vec0 = torch.cat((codebook[index[0]][1], codebook[index[0]][1]), 1)
+            vec1 = torch.cat((codebook[index[1]][1], codebook[index[2]][1]), 1)
+            vec = torch.cat((vec0, vec1),1)  
+        if num == 2:
+            vec0 = torch.cat((codebook[index[0]][1], codebook[index[1]][1]), 1)
+            vec1 = torch.cat((codebook[index[2]][1], codebook[index[3]][1]), 1)
+            vec = torch.cat((vec0, vec1),1)  
+        return vec
+    
     def forward(self, x, timesteps, y=None):
         """
         x: [batch_size, njoints, nfeats, max_frames], denoted x_t in the paper
@@ -178,6 +214,7 @@ class MDM(nn.Module):
             txt_emb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
 
             #get pose embed
+            posevec = subPoseRetrieval(SRL_model, y['text'])
             posevec = self.posefc(posevec)
             pose_embed = self.pose_encoder(posevec)
             pose_embed = self.posefc(pose_embed)
