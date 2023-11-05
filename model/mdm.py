@@ -5,34 +5,9 @@ import torch.nn.functional as F
 import clip
 import random
 from model.rotation2xyz import Rotation2xyz
-#from textattack.augmentation import CLAREAugmenter
 
-#def textAug(ss):
-#    augmenter = CLAREAugmenter()
-#    news = []
-#    for s in ss:
-#      new = augmenter.augment(s)
-#      news.append(new[0])
-#    return news
-'''
-def textRep(ss):
-    newss = []
-    for s in ss:
-        if (random.randint(1, 10) >= 6):
-            txt_dict = txt_read('oldnew.txt')
-            for key, value in txt_dict.items():
-                s = s.replace(key, value)
-        newss.append(s)
-    return newss
-    
-def textAtk(ss, Augmenter):
-    newss = []
-    accuracy = 0.0
-    for s in ss:
-        s = Augmenter.augment(s)
-        newss.append(s[0])
-    return newss
-'''  
+
+
 def add_gaussian_noise(tensor0, mean=0, std=0.1):
     shape = tensor0.size()
     noise = torch.cuda.FloatTensor(shape) if torch.cuda.is_available() else torch.FloatTensor(shape)
@@ -83,7 +58,9 @@ class MDM(nn.Module):
         self.input_process = InputProcess(self.data_rep, self.input_feats+self.gru_emb_dim, self.latent_dim)
 
         self.sequence_pos_encoder = PositionalEncoding(self.latent_dim, self.dropout)
-        self.pose_encoder = PositionalEncoding(self.clip_dim, self.dropout)
+
+        #positionalEncoding for pose transformer
+        self.pose_encoder = PositionalEncoding(self.latent_dim, self.dropout)
         self.emb_trans_dec = emb_trans_dec
 
         if self.arch == 'trans_enc':
@@ -115,11 +92,14 @@ class MDM(nn.Module):
 
         if self.cond_mode != 'no_cond':
             if 'text' in self.cond_mode:
+                print('EMBED TEXT')
                 self.embed_text = nn.Linear(self.clip_dim, self.latent_dim)
+
+                #from pose feature(fetched from codebook) to condition
                 self.pose_dim = 288
                 print('POSE TRANS')
-                self.fc = nn.Linear(self.pose_dim, self.clip_dim)
-                poseTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.clip_dim,
+                self.posefc = nn.Linear(self.pose_dim, self.latent_dim)
+                poseTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.latent_dim,
                                                               nhead=self.num_heads,
                                                               dim_feedforward=self.ff_size,
                                                               dropout=self.dropout,
@@ -127,7 +107,8 @@ class MDM(nn.Module):
 
                 self.poseTransEncoder = nn.TransformerEncoder(seqTransEncoderLayer,
                                                          num_layers=self.num_layers)
-                print('EMBED TEXT')
+                
+                
                 print('Loading CLIP...')
                 self.clip_version = clip_version
                 self.clip_model = self.load_and_freeze_clip(clip_version)
@@ -187,7 +168,6 @@ class MDM(nn.Module):
         """
         x: [batch_size, njoints, nfeats, max_frames], denoted x_t in the paper
         timesteps: [batch_size] (int)
-        AttackFlag=False, Augmenter=None, (between timesteps&y)
         """
         bs, njoints, nfeats, nframes = x.shape
         emb = self.embed_timestep(timesteps)  # [1, bs, d]
@@ -195,18 +175,14 @@ class MDM(nn.Module):
         force_mask = y.get('uncond', False)
         if 'text' in self.cond_mode:
             enc_text = self.encode_text(y['text'])
-            oldemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
+            txt_emb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
 
-            '''
-            if (AttackFlag):
-                newtext = textAtk(y['text'], Augmenter)
-                enc_text = self.encode_text(newtext)
-                newemb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
-                emb += newemb
-            else:
-                emb += oldemb
-            '''
-            emb += oldemb
+            #get pose embed
+            posevec = self.posefc(posevec)
+            pose_embed = self.pose_encoder(posevec)
+            pose_embed = self.posefc(pose_embed)
+            pose_emb = self.poseTransEncoder(pose_embed)[1:]
+            emb += txt_emb + pose_emb
         
             #enc_text = self.encode_text(textRep(y['text']))
             #enc_text = self.encode_text(textAug(y['text']))
