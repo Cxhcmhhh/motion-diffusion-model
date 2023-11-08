@@ -87,8 +87,13 @@ class MDM(nn.Module):
                 print('EMBED TEXT')
                 self.embed_text = nn.Linear(self.clip_dim, self.latent_dim)
 
+                print('loading codebook')
+                self.textbook = np.load('codebook/textbook.npy')
+                self.posebook = np.load('codebook/posebook.npy')
+                self.textbookTensor = torch.as_tensor(self.textbook).to(device)
+                self.posebookTensor = torch.as_tensor(self.posebook).to(device)
                 #from pose feature(fetched from codebook) to condition
-                self.pose_dim = 288
+                self.pose_dim = 72
                 print('POSE TRANS')
                 self.posefc = nn.Linear(self.pose_dim, self.latent_dim)
                 poseTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.latent_dim,
@@ -161,8 +166,8 @@ class MDM(nn.Module):
 
     def subPoseRetrieval(SRLpre, Txt):
         subDict = SRLpre.predict(Txt)
-        index = [0, 0, 0, 0]
         num = 0
+        vec = torch.zeros(4, 72).to(device)
         for v in subDict['verbs']:
             if num == 4:
                 break
@@ -175,29 +180,31 @@ class MDM(nn.Module):
             sen = sen[:-1]+'.'
             if ' ' in sen:
                 enc_text = self.encode_text(sen)
-                min = 999999
-                pdist = nn.PairwiseDistance(p=2)
-                for i in range(len(self.codebook)):
-                    dis = pdist(codebook[i][0], enc_text)
-                    if (dis < min):
-                        min = dis
-                        index[num] = i
+                d = torch.sum(enc_text ** 2, dim=1, keepdim=True) + \
+                torch.sum(self.textbookTensor**2, dim=1) - 2 * \
+                torch.matmul(enc_text, self.textbookTensor.t())
+
+                #from text index to pose index
+                min_encoding_indices = torch.argmin(d, dim=1).unsqueeze(1)
+                t_ran = torch.randint(0,12,min_encoding_indices.shape)
+                min_indices = (torch.div(min_encoding_indices, 4, rounding_mode='floor'))  * 12 + t_ran
+                min_encodings = torch.zeros(
+                    min_indices.shape[0], 72).to(device)#72 is pose dim
+                min_encodings.scatter_(1, min_indices, 1)
+        
+                # get quantized latent vectors
+                z_q = torch.matmul(min_encodings, self.posebookTensor).view(1, 72)
+                vec[num].add_(vec[num], z_q)
                 num += 1
         if num == 1:
-            vec0 = torch.cat((codebook[index[0]][1], codebook[index[0]][1]), 1)
-            vec = torch.cat((vec0, vec0),1)
+            vec[1].add_(vec[0])
+            vec[2].add_(vec[0])
+            vec[3].add_(vec[0])
         if num == 2:
-            vec0 = torch.cat((codebook[index[0]][1], codebook[index[0]][1]), 1)
-            vec1 = torch.cat((codebook[index[1]][1], codebook[index[1]][1]), 1)
-            vec = torch.cat((vec0, vec1),1)  
+            vec[2].add_(vec[1])
+            vec[3].add_(vec[1])
         if num == 3:
-            vec0 = torch.cat((codebook[index[0]][1], codebook[index[0]][1]), 1)
-            vec1 = torch.cat((codebook[index[1]][1], codebook[index[2]][1]), 1)
-            vec = torch.cat((vec0, vec1),1)  
-        if num == 2:
-            vec0 = torch.cat((codebook[index[0]][1], codebook[index[1]][1]), 1)
-            vec1 = torch.cat((codebook[index[2]][1], codebook[index[3]][1]), 1)
-            vec = torch.cat((vec0, vec1),1)  
+            vec[3].add_(vec[2])
         return vec
     
     def forward(self, x, timesteps, y=None):
