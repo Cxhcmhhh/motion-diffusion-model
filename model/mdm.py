@@ -90,6 +90,7 @@ class MDM(nn.Module):
                 print('loading codebook')
                 self.textbook = np.load('codebook/textbook.npy')
                 self.posebook = np.load('codebook/posebook.npy')
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 self.textbookTensor = torch.as_tensor(self.textbook).to(device)
                 self.posebookTensor = torch.as_tensor(self.posebook).to(device)
                 #from pose feature(fetched from codebook) to condition
@@ -166,6 +167,7 @@ class MDM(nn.Module):
 
     def subPoseRetrieval(SRLpre, Txt):
         subDict = SRLpre.predict(Txt)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         num = 0
         vec = torch.zeros(4, 72).to(device)
         for v in subDict['verbs']:
