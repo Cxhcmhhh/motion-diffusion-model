@@ -103,7 +103,7 @@ class MDM(nn.Module):
                                                               dropout=self.dropout,
                                                               activation=self.activation)
 
-                self.poseTransEncoder = nn.TransformerEncoder(seqTransEncoderLayer,
+                self.poseTransEncoder = nn.TransformerEncoder(poseTransEncoderLayer,
                                                          num_layers=self.num_layers)
                 
                 
