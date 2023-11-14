@@ -61,6 +61,9 @@ def add_base_options(parser):
     group.add_argument("--device", default=0, type=int, help="Device id to use.")
     group.add_argument("--seed", default=10, type=int, help="For fixing random seed.")
     group.add_argument("--batch_size", default=64, type=int, help="Batch size during training.")
+    group.add_argument("--centers", default=966, type=int, help="clusters of codebook")
+    group.add_argument("--numtsample", default=4, type=int, help="how many texts are chosen")
+    group.add_argument("--numpsample", default=3, type=int, help="how many poses are chosen")
 
 
 def add_diffusion_options(parser):
