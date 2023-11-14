@@ -11,7 +11,7 @@ class MDM(nn.Module):
     def __init__(self, modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
                  latent_dim=256, ff_size=1024, num_layers=8, num_heads=4, dropout=0.1,
                  ablation=None, activation="gelu", legacy=False, data_rep='rot6d', dataset='amass', clip_dim=512,
-                 arch='trans_enc', emb_trans_dec=False, clip_version=None, **kargs):
+                 arch='trans_enc', emb_trans_dec=False, centers=1024, numtsample=4, numpsample=3, clip_version=None, **kargs):
         super().__init__()
 
         self.legacy = legacy
@@ -22,6 +22,11 @@ class MDM(nn.Module):
         self.data_rep = data_rep
         self.dataset = dataset
 
+        #define the codebook we use
+        self.centers = centers
+        self.numtsample = numtsample
+        self.numpsample = numpsample
+                     
         self.pose_rep = pose_rep
         self.glob = glob
         self.glob_rot = glob_rot
@@ -188,8 +193,9 @@ class MDM(nn.Module):
 
                 #from text index to pose index
                 min_encoding_indices = torch.argmin(d, dim=1).unsqueeze(1)
-                t_ran = torch.randint(0,12,min_encoding_indices.shape)
-                min_indices = (torch.div(min_encoding_indices, 4, rounding_mode='floor'))  * 12 + t_ran
+                tmulp = self.numtsample * self.numpsample
+                t_ran = torch.randint(0,tmulp,min_encoding_indices.shape)
+                min_indices = (torch.div(min_encoding_indices, self.numtsample, rounding_mode='floor'))  * (tmulp) + t_ran
                 min_encodings = torch.zeros(
                     min_indices.shape[0], 72).to(device)#72 is pose dim
                 min_encodings.scatter_(1, min_indices, 1)
