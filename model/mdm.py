@@ -93,8 +93,8 @@ class MDM(nn.Module):
                 self.embed_text = nn.Linear(self.clip_dim, self.latent_dim)
 
                 print('loading codebook')
-                self.textbook = np.load('codebook/textbook.npy')
-                self.posebook = np.load('codebook/posebook.npy')
+                self.textbook = np.load('codebook/'+str(self.centers)+'textbook.npy')
+                self.posebook = np.load('codebook/'+str(self.centers)+'posebook.npy')
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 self.textbookTensor = torch.as_tensor(self.textbook).to(device)
                 self.posebookTensor = torch.as_tensor(self.posebook).to(device)
