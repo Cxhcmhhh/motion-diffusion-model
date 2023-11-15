@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import clip
 import random
 from model.rotation2xyz import Rotation2xyz
-from allennlp_models import pretrained as allenPre
+from allennlp.predictors.predictor import Predictor
 
 class MDM(nn.Module):
     def __init__(self, modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
@@ -55,9 +55,9 @@ class MDM(nn.Module):
         self.input_process = InputProcess(self.data_rep, self.input_feats+self.gru_emb_dim, self.latent_dim)
 
         self.sequence_pos_encoder = PositionalEncoding(self.latent_dim, self.dropout)
-
+        self.pose_latent_dim = 128
         #positionalEncoding for pose transformer
-        self.pose_encoder = PositionalEncoding(self.latent_dim, self.dropout)
+        self.pose_encoder = PositionalEncoding(self.pose_latent_dim, self.dropout)
         self.emb_trans_dec = emb_trans_dec
 
         if self.arch == 'trans_enc':
@@ -101,8 +101,8 @@ class MDM(nn.Module):
                 #from pose feature(fetched from codebook) to condition
                 self.pose_dim = 72
                 print('POSE TRANS')
-                self.posefc = nn.Linear(self.pose_dim, self.latent_dim)
-                poseTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.latent_dim,
+                self.posefc = nn.Linear(self.pose_dim, self.pose_latent_dim)
+                poseTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.pose_latent_dim,
                                                               nhead=self.num_heads,
                                                               dim_feedforward=self.ff_size,
                                                               dropout=self.dropout,
@@ -117,7 +117,7 @@ class MDM(nn.Module):
                 self.clip_model = self.load_and_freeze_clip(clip_version)
 
                 print('Loading SRL-BERT')
-                self.SRL_model = allenPre.load_predictor('structured-prediction-srl-bert')
+                self.SRL_model = Predictor.from_path("./predata/srlbert")
             if 'action' in self.cond_mode:
                 self.embed_action = EmbedAction(self.num_actions, self.latent_dim)
                 print('EMBED ACTION')
@@ -170,7 +170,7 @@ class MDM(nn.Module):
             texts = clip.tokenize(raw_text, truncate=True).to(device) # [bs, context_length] # if n_tokens > 77 -> will truncate
         return self.clip_model.encode_text(texts).float()
 
-    def subPoseRetrieval(SRLpre, Txt):
+    def subPoseRetrieval(self, SRLpre, Txt):
         subDict = SRLpre.predict(Txt)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         num = 0
@@ -189,20 +189,25 @@ class MDM(nn.Module):
                 enc_text = self.encode_text(sen)
                 d = torch.sum(enc_text ** 2, dim=1, keepdim=True) + \
                 torch.sum(self.textbookTensor**2, dim=1) - 2 * \
-                torch.matmul(enc_text, self.textbookTensor.t())
+                torch.matmul(enc_text.float(), self.textbookTensor.float().t().to(device))
 
                 #from text index to pose index
-                min_encoding_indices = torch.argmin(d, dim=1).unsqueeze(1)
+                min_encoding_indices = torch.argmin(d, dim=1).unsqueeze(1).to(device)
                 tmulp = self.numtsample * self.numpsample
-                t_ran = torch.randint(0,tmulp,min_encoding_indices.shape)
-                min_indices = (torch.div(min_encoding_indices, self.numtsample, rounding_mode='floor'))  * (tmulp) + t_ran
+                t_ran = torch.randint(0,tmulp,min_encoding_indices.shape).to(device)
+                min_indices = (torch.floor(torch.div(min_encoding_indices, self.numtsample)))  * (tmulp) + t_ran
+                if self.centers==1024:
+                    cen = 966
+                else:
+                    cen = self.centers
+                cmultp = cen * tmulp
                 min_encodings = torch.zeros(
-                    min_indices.shape[0], 72).to(device)#72 is pose dim
-                min_encodings.scatter_(1, min_indices, 1)
-        
+                    min_indices.shape[0], cmultp).to(device)#72 is pose dim
+                min_encodings.scatter_(1, min_indices.long(), 1)
+                fl = open('log.txt','w')
                 # get quantized latent vectors
-                z_q = torch.matmul(min_encodings, self.posebookTensor).view(1, 72)
-                vec[num].add_(vec[num], z_q)
+                z_q = torch.matmul(min_encodings.float(), self.posebookTensor.float().to(device)).view(1, 72)
+                vec[num].add_(z_q.reshape(-1))
                 num += 1
         if num == 1:
             vec[1].add_(vec[0])
@@ -222,18 +227,21 @@ class MDM(nn.Module):
         """
         bs, njoints, nfeats, nframes = x.shape
         emb = self.embed_timestep(timesteps)  # [1, bs, d]
-
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         force_mask = y.get('uncond', False)
         if 'text' in self.cond_mode:
             enc_text = self.encode_text(y['text'])
             txt_emb = self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
 
             #get pose embed
-            posevec = subPoseRetrieval(SRL_model, y['text'])
+            posevec = torch.zeros(len(y['text']),4, 72).to(device)
+            for numt in range(len(y['text'])):
+                fposevec = self.subPoseRetrieval(self.SRL_model, y['text'][numt])
+                posevec[numt] += fposevec
             posevec = self.posefc(posevec)
             pose_embed = self.pose_encoder(posevec)
-            pose_embed = self.posefc(pose_embed)
-            pose_emb = self.poseTransEncoder(pose_embed)[1:]
+            pose_emb = self.poseTransEncoder(pose_embed)
+            pose_emb = pose_emb.view([pose_emb.size()[0],-1])
             emb += txt_emb + pose_emb
         
             #enc_text = self.encode_text(textRep(y['text']))
